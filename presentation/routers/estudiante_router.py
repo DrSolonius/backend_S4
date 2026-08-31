@@ -6,13 +6,16 @@ from application.services.estudiante_service import EstudianteService
 from infrastructure.repositories.estudiante_repository import (
     estudiante_repository,
 )
-from presentation.dtos.estudiante_dto import (
+from presentation.schemas.dtos.estudiante_dto import (
     EstudianteCreateDTO,
     EstudianteUpdateDTO,
     EstudianteResponseDTO,
     EstudiantePaginaDTO,
 )
-from presentation.dtos.estudiante_query_dto import EstudianteQueryDTO
+
+from presentation.schemas.dtos.estudiante_query_dto import (
+    EstudianteQueryDTO,
+)
 
 
 router = APIRouter(
