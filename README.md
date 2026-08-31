@@ -38,10 +38,98 @@ Para detener el servidor, presiona **Ctrl + C**. La opción `--reload` reinicia 
 
 > La ruta `/` no está implementada. Un error 404 al abrir `http://127.0.0.1:8000/` no significa que el servidor haya fallado; abre `/docs`.
 
+## Depuración con VS Code (Windows)
+
+La depuración permite detener una solicitud en una línea del código, inspeccionar variables y seguir el recorrido entre router, servicio, dominio y repositorio.
+
+### 1. Preparar el entorno
+
+1. Abre en VS Code la raíz del proyecto: la carpeta que contiene `pyproject.toml`, `.vscode` y `app`.
+2. Instala las extensiones **Python** y **Python Debugger**, ambas de Microsoft.
+3. Ejecuta en la terminal integrada:
+
+```powershell
+uv sync
+```
+
+4. Presiona **Ctrl + Shift + P**, busca **Python: Select Interpreter** y selecciona `.venv\Scripts\python.exe`. Si no aparece, utiliza la opción para introducir la ruta del intérprete.
+
+### 2. Usar la configuración incluida
+
+El repositorio ya incluye [`.vscode/launch.json`](.vscode/launch.json), con la configuración **Depurar API de estudiantes**. No necesitas crear otra.
+
+| Configuración | Función |
+|---|---|
+| `type: debugpy` | Utiliza el depurador de Python. |
+| `module: uvicorn` | Inicia el servidor Uvicorn dentro del depurador. |
+| `python` | Usa el ejecutable de `.venv/Scripts/python.exe`. |
+| `app.main:app` | Carga la variable `app` definida en `app/main.py`. |
+| `cwd: ${workspaceFolder}` | Ejecuta desde la carpeta abierta en VS Code. |
+| `justMyCode: true` | Permite concentrarse en el código del proyecto al avanzar paso a paso. |
+
+> La ruta del intérprete está configurada para Windows. En Linux o macOS debe adaptarse a `${workspaceFolder}/.venv/bin/python`.
+
+### 3. Colocar un punto de interrupción
+
+Abre `application/services/estudiante_service.py`. Dentro del método `crear()`, haz clic a la izquierda del número de línea de:
+
+```python
+estudiante = Estudiante(
+```
+
+Aparecerá un punto rojo. El depurador pausará la ejecución antes de ejecutar esa línea.
+
+### 4. Iniciar y enviar una solicitud
+
+1. Si ya ejecutaste Uvicorn desde una terminal, detenlo con **Ctrl + C** para liberar el puerto 8000.
+2. Abre **Run and Debug / Ejecutar y depurar** con **Ctrl + Shift + D**.
+3. Selecciona **Depurar API de estudiantes** y presiona **F5**.
+4. Espera a que el servidor termine de iniciar y abre [Swagger UI](http://127.0.0.1:8000/docs).
+5. En `POST /estudiantes`, pulsa **Try it out**, envía el siguiente cuerpo y pulsa **Execute**:
+
+```json
+{
+  "nombre": "Ana",
+  "apellido": "Pérez",
+  "email": "ana@example.com"
+}
+```
+
+VS Code se detendrá en el punto rojo. En **Variables** o al pasar el cursor sobre una variable, podrás revisar `nombre`, `apellido` y `email`. Cuando la construcción de la entidad termine, podrás inspeccionar también `estudiante`.
+
+> Mientras la solicitud esté pausada, Swagger seguirá esperando la respuesta. Presiona **F5** para continuar. Si el cuerpo no pasa la validación del DTO, FastAPI devuelve 422 antes de llegar al servicio y ese punto de interrupción no se activa.
+
+### 5. Avanzar por el código
+
+| Tecla | Acción |
+|---|---|
+| **F9** | Agregar o quitar un punto de interrupción en la línea actual. |
+| **F10** | Ejecutar la línea actual sin entrar en sus funciones. |
+| **F11** | Entrar en una función cuando sea posible. |
+| **Shift + F11** | Continuar hasta salir de la función actual. |
+| **F5** | Continuar hasta el siguiente punto de interrupción. |
+| **Shift + F5** | Detener la depuración. |
+
+Para observar distintas capas, coloca puntos también en `crear_estudiante()` del router, `__post_init__()` del dominio y `crear()` del repositorio. El panel **Call Stack / Pila de llamadas** muestra qué funciones llevaron a la línea actual.
+
+### 6. Reiniciar y resolver problemas
+
+- La configuración no utiliza `--reload`. Después de cambiar el código, detén y vuelve a iniciar la depuración.
+- Cada reinicio borra los estudiantes guardados en memoria.
+- Si el puerto 8000 está ocupado, detén el otro servidor antes de presionar F5.
+- Si no se encuentra el intérprete, comprueba que ejecutaste `uv sync` en la raíz y que existe `.venv\Scripts\python.exe`.
+- Si aparece `Could not import module "main"`, verifica que se está usando la configuración incluida, cuyo argumento es `app.main:app`.
+- Si aparece `No module named 'app'`, revisa que la carpeta abierta en VS Code contenga directamente `app/main.py`.
+- Si no se activa el punto rojo, confirma que lo colocaste en una línea ejecutable del endpoint solicitado y que enviaste la solicitud al servidor iniciado con F5.
+
+Referencia: [Depuración de Python en VS Code](https://code.visualstudio.com/docs/python/debugging).
+
 ## Estructura por capas
 
 ```text
 backend_S4/
+├── .vscode/
+│   └── launch.json
 ├── app/
 │   └── main.py
 ├── application/
@@ -326,3 +414,4 @@ __pycache__/
 ```
 
 Sí debes conservar `pyproject.toml` y `uv.lock`. Si los archivos `__pycache__` ya están publicados, agregar estas reglas no los retira del seguimiento: hace falta quitarlos también del índice de Git.
+
