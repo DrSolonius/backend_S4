@@ -1,188 +1,82 @@
-Sistema Académico — API de estudiantes
+# Sistema Académico — API de estudiantes
 
-Proyecto educativo para aprender a construir una API HTTP con FastAPI, organizar el código por capas y utilizar schemas y DTO con Pydantic.
+Proyecto educativo para aprender a construir una API HTTP con **FastAPI**, organizar el código por capas y utilizar **Pydantic, DTO, schemas, servicios, dominio y repositorios**.
 
-La aplicación permite crear, consultar, actualizar, eliminar y listar estudiantes con paginación. Los datos se guardan en memoria, dentro de un diccionario de Python. No utiliza una base de datos ni SQLAlchemy.
+La aplicación permite crear, consultar, actualizar, eliminar y listar estudiantes con paginación.
 
-En esta etapa del proyecto:
+En esta etapa:
 
-schemas/ agrupa los contratos y validaciones utilizados por la capa de presentación.
+- Los datos se almacenan **en memoria**.
+- No se utiliza base de datos.
+- No se utiliza ORM.
+- Los DTO están organizados dentro de `presentation/schemas/dtos/`.
+- Se utiliza un **seeder** para cargar 60 estudiantes de prueba.
+- No existe un mapper separado porque las conversiones actuales son directas.
 
-dtos/ se mantiene dentro de schemas/ para representar los objetos de transferencia de datos usados por la API.
+---
 
-No se utiliza un mapper separado porque las conversiones actuales son directas.
+## Requisitos
 
-El repositorio utiliza almacenamiento en memoria.
+- Python 3.14 o superior.
+- `uv` instalado.
+- Git.
 
-Requisitos
+---
 
-Python 3.14 o superior, según el pyproject.toml del proyecto.
+## Instalación
 
-uv instalado.
+Clona el repositorio:
 
-Git, si vas a clonar el repositorio.
-
-Instalación y ejecución
-
-Si todavía no tienes el proyecto en tu computador:
-
+```bash
 git clone https://github.com/DrSolonius/backend_S4.git
 cd backend_S4
+```
 
-Si ya lo tienes, abre una terminal en la raíz del proyecto: la carpeta que contiene pyproject.toml, app, application, domain, infrastructure y presentation.
+Instala las dependencias:
 
-Instala las dependencias y ejecuta el servidor:
-
+```bash
 uv sync
+```
+
+---
+
+## Ejecutar la API
+
+Desde la raíz del proyecto:
+
+```bash
 uv run uvicorn app.main:app --reload
+```
 
-No necesitas activar manualmente el entorno virtual para usar uv run.
+Por defecto Uvicorn utiliza el puerto `8000`.
 
-Documentación interactiva: Swagger UI.
+Swagger:
 
-Documentación alternativa: ReDoc.
+```text
+http://127.0.0.1:8000/docs
+```
 
-Listado de estudiantes: GET /estudiantes.
+ReDoc:
 
-Para detener el servidor, presiona Ctrl + C. La opción --reload reinicia el servidor cuando guardas cambios en el código.
+```text
+http://127.0.0.1:8000/redoc
+```
 
-La ruta / no está implementada. Un error 404 al abrir http://127.0.0.1:8000/ no significa que el servidor haya fallado; abre /docs.
+Si el puerto está ocupado, puedes utilizar otro:
 
-Depuración con VS Code (Windows)
+```bash
+uv run uvicorn app.main:app --reload --port 8765
+```
 
-La depuración permite detener una solicitud en una línea del código, inspeccionar variables y seguir el recorrido entre router, DTO, servicio, dominio y repositorio.
+---
 
-1. Preparar el entorno
+## Estructura del proyecto
 
-Abre en VS Code la raíz del proyecto: la carpeta que contiene pyproject.toml, .vscode y app.
-
-Instala las extensiones Python y Python Debugger, ambas de Microsoft.
-
-Ejecuta en la terminal integrada:
-
-uv sync
-
-Presiona Ctrl + Shift + P, busca Python: Select Interpreter y selecciona .venv\Scripts\python.exe. Si no aparece, utiliza la opción para introducir la ruta del intérprete.
-
-2. Usar la configuración incluida
-
-El repositorio ya incluye .vscode/launch.json, con la configuración Depurar API de estudiantes. No necesitas crear otra.
-
-Configuración
-
-Función
-
-type: debugpy
-
-Utiliza el depurador de Python.
-
-module: uvicorn
-
-Inicia el servidor Uvicorn dentro del depurador.
-
-python
-
-Usa el ejecutable de .venv/Scripts/python.exe.
-
-app.main:app
-
-Carga la variable app definida en app/main.py.
-
-cwd: ${workspaceFolder}
-
-Ejecuta desde la carpeta abierta en VS Code.
-
-justMyCode: true
-
-Permite concentrarse en el código del proyecto al avanzar paso a paso.
-
-La ruta del intérprete está configurada para Windows. En Linux o macOS debe adaptarse a ${workspaceFolder}/.venv/bin/python.
-
-3. Colocar un punto de interrupción
-
-Abre application/services/estudiante_service.py. Dentro del método crear(), haz clic a la izquierda del número de línea de:
-
-estudiante = Estudiante(
-
-Aparecerá un punto rojo. El depurador pausará la ejecución antes de ejecutar esa línea.
-
-4. Iniciar y enviar una solicitud
-
-Si ya ejecutaste Uvicorn desde una terminal, detenlo con Ctrl + C para liberar el puerto 8000.
-
-Abre Run and Debug / Ejecutar y depurar con Ctrl + Shift + D.
-
-Selecciona Depurar API de estudiantes y presiona F5.
-
-Espera a que el servidor termine de iniciar y abre Swagger UI.
-
-En POST /estudiantes, pulsa Try it out, envía el siguiente cuerpo y pulsa Execute:
-
-{
-  "nombre": "Ana",
-  "apellido": "Pérez",
-  "email": "ana@example.com"
-}
-
-VS Code se detendrá en el punto rojo. En Variables o al pasar el cursor sobre una variable, podrás revisar nombre, apellido y email. Cuando la construcción de la entidad termine, podrás inspeccionar también estudiante.
-
-Mientras la solicitud esté pausada, Swagger seguirá esperando la respuesta. Presiona F5 para continuar. Si el cuerpo no pasa la validación del DTO, FastAPI devuelve 422 antes de llegar al servicio y ese punto de interrupción no se activa.
-
-5. Avanzar por el código
-
-Tecla
-
-Acción
-
-F9
-
-Agregar o quitar un punto de interrupción en la línea actual.
-
-F10
-
-Ejecutar la línea actual sin entrar en sus funciones.
-
-F11
-
-Entrar en una función cuando sea posible.
-
-Shift + F11
-
-Continuar hasta salir de la función actual.
-
-F5
-
-Continuar hasta el siguiente punto de interrupción.
-
-Shift + F5
-
-Detener la depuración.
-
-Para observar distintas capas, coloca puntos también en crear_estudiante() del router, __post_init__() del dominio y crear() del repositorio. El panel Call Stack / Pila de llamadas muestra qué funciones llevaron a la línea actual.
-
-6. Reiniciar y resolver problemas
-
-La configuración no utiliza --reload. Después de cambiar el código, detén y vuelve a iniciar la depuración.
-
-Cada reinicio borra los estudiantes guardados en memoria.
-
-Si el puerto 8000 está ocupado, detén el otro servidor antes de presionar F5.
-
-Si no se encuentra el intérprete, comprueba que ejecutaste uv sync en la raíz y que existe .venv\Scripts\python.exe.
-
-Si aparece Could not import module "main", verifica que se está usando la configuración incluida, cuyo argumento es app.main:app.
-
-Si aparece No module named 'app', revisa que la carpeta abierta en VS Code contenga directamente app/main.py.
-
-Si no se activa el punto rojo, confirma que lo colocaste en una línea ejecutable del endpoint solicitado y que enviaste la solicitud al servidor iniciado con F5.
-
-Referencia: Depuración de Python en VS Code.
-
-Estructura por capas
-
+```text
 backend_S4/
 ├── .vscode/
-│   └── launch.json
+│   ├── launch.json
+│   └── settings.json
 │
 ├── app/
 │   └── main.py
@@ -195,8 +89,11 @@ backend_S4/
 │   └── estudiante.py
 │
 ├── infrastructure/
-│   └── repositories/
-│       └── estudiante_repository.py
+│   ├── repositories/
+│   │   └── estudiante_repository.py
+│   │
+│   └── seeders/
+│       └── estudiante_seeder.py
 │
 ├── presentation/
 │   ├── routers/
@@ -207,199 +104,310 @@ backend_S4/
 │           ├── estudiante_dto.py
 │           └── estudiante_query_dto.py
 │
+├── .gitignore
+├── README.md
 ├── pyproject.toml
 └── uv.lock
+```
 
-Responsabilidad de cada parte
+---
 
-Parte
+## Responsabilidad de cada capa
 
-Responsabilidad
+| Componente | Responsabilidad |
+|---|---|
+| `app/main.py` | Crea la aplicación FastAPI, carga los datos iniciales y registra los routers. |
+| `presentation/routers` | Define los endpoints y recibe las solicitudes HTTP. |
+| `presentation/schemas` | Agrupa las estructuras relacionadas con entrada, salida y validación de la API. |
+| `presentation/schemas/dtos` | Contiene los DTO implementados con Pydantic. |
+| `application/services` | Coordina los casos de uso y las reglas de aplicación. |
+| `domain` | Define la entidad `Estudiante`, su estado y comportamiento. |
+| `infrastructure/repositories` | Guarda y recupera estudiantes desde memoria. |
+| `infrastructure/seeders` | Carga datos iniciales para pruebas. |
 
-app/main.py
+---
 
-Crea la aplicación FastAPI y registra el router.
+## Arquitectura actual
 
-presentation/routers
+```text
+CLIENTE
+   │
+   │ HTTP / JSON
+   ▼
+┌─────────────────────────────────┐
+│ PRESENTATION                    │
+│                                 │
+│ Router                          │
+│ + DTO / Pydantic                │
+│ + Validaciones                  │
+└────────────────┬────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────┐
+│ APPLICATION                     │
+│                                 │
+│ EstudianteService               │
+│ Casos de uso y coordinación     │
+└────────────────┬────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────┐
+│ DOMAIN                          │
+│                                 │
+│ Estudiante                      │
+│ Estado y comportamiento         │
+└────────────────┬────────────────┘
+                 │
+                 ▼
+┌─────────────────────────────────┐
+│ INFRASTRUCTURE                  │
+│                                 │
+│ EstudianteRepository            │
+│ Almacenamiento en memoria       │
+└─────────────────────────────────┘
+```
 
-Define los endpoints HTTP y coordina la entrada y salida de la API.
+Flujo simplificado:
 
-presentation/schemas
-
-Agrupa los contratos y validaciones asociados a la capa de presentación.
-
-presentation/schemas/dtos
-
-Contiene los DTO Pydantic utilizados para transportar y validar datos de entrada y salida.
-
-application/services
-
-Coordina las operaciones, comprueba correos duplicados y calcula la paginación.
-
-domain
-
-Define la entidad Estudiante, sus validaciones básicas y sus comportamientos.
-
-infrastructure/repositories
-
-Guarda y recupera estudiantes mediante un repositorio en memoria.
-
-Este ejemplo utiliza un servicio que depende de un repositorio concreto para mantener sencilla la primera implementación. No pretende implementar todos los patrones de arquitectura limpia.
-
-¿Qué es un schema?
-
-En este proyecto, schemas/ es una carpeta de organización de la capa de presentación.
-
-Su propósito es agrupar las estructuras que definen cómo deben verse y validarse los datos utilizados por la API.
-
-Conceptualmente:
-
-JSON
- ↓
-Schema / DTO Pydantic
- ↓
-Router
- ↓
+```text
+Cliente
+   ↓
+HTTP / JSON
+   ↓
+Router + DTO Pydantic
+   ↓
 Service
- ↓
-Dominio
- ↓
-Repositorio en memoria
+   ↓
+Entidad de dominio
+   ↓
+Repository
+   ↓
+Memoria
+```
 
-En esta versión no existe un archivo estudiante_schema.py separado porque los DTO actuales ya utilizan Pydantic y cumplen la función de definir estructura y validación.
+---
 
-Por eso la estructura utilizada es:
+## ¿Qué es un schema?
 
-schemas/
-└── dtos/
+En este proyecto, `schemas/` agrupa las estructuras utilizadas por la capa de presentación para definir cómo deben verse los datos que entran y salen de la API.
 
-Esto permite conservar explícitamente el concepto de DTO sin duplicar clases innecesariamente.
+Actualmente los DTO son clases de Pydantic, por lo que ya cumplen funciones de:
 
-¿Qué es un DTO?
+- definición de estructura;
+- validación;
+- transformación;
+- serialización.
 
-DTO significa Data Transfer Object, u objeto de transferencia de datos.
+Por eso se organizan así:
 
-Un DTO representa los datos que se transfieren entre componentes. En este proyecto, además, los DTO son clases de Pydantic, por lo que también permiten validar los datos que recibe o devuelve la API.
+```text
+presentation/
+└── schemas/
+    └── dtos/
+        ├── estudiante_dto.py
+        └── estudiante_query_dto.py
+```
 
-Los DTO están ubicados en:
+No se crea un archivo `estudiante_schema.py` adicional porque duplicaría responsabilidades en esta etapa.
 
+---
+
+## ¿Qué es un DTO?
+
+DTO significa **Data Transfer Object**.
+
+Un DTO representa datos que se transfieren entre componentes.
+
+| DTO | Responsabilidad |
+|---|---|
+| `EstudianteCreateDTO` | Define y valida los datos necesarios para crear un estudiante. |
+| `EstudianteUpdateDTO` | Define y valida los datos necesarios para actualizar un estudiante. |
+| `EstudianteResponseDTO` | Define la estructura de un estudiante devuelto por la API. |
+| `EstudiantePaginaDTO` | Define la respuesta paginada. |
+| `EstudianteQueryDTO` | Valida los parámetros `pagina` y `tamano`. |
+
+Los DTO se encuentran en:
+
+```text
 presentation/schemas/dtos/
+```
 
-DTO
+---
 
-Uso
+## DTO y entidad de dominio
 
+```text
 EstudianteCreateDTO
+        │
+        │ datos de entrada
+        ▼
+EstudianteService
+        │
+        │ crea
+        ▼
+Estudiante
+```
 
-Valida nombre, apellido y email al crear un estudiante.
+`EstudianteCreateDTO` pertenece a la frontera de la API.
 
-EstudianteUpdateDTO
+`Estudiante` representa el objeto del dominio.
 
-Valida esos tres campos al actualizar. Todos son obligatorios.
+---
 
-EstudianteQueryDTO
+## Validación con Pydantic
 
-Valida pagina y tamano, recibidos como parámetros de la URL.
+Ejemplo:
 
-EstudianteResponseDTO
+```python
+class EstudianteCreateDTO(BaseModel):
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        extra="forbid",
+    )
 
-Define los datos que devuelve la API de un estudiante.
+    nombre: str = Field(min_length=1, max_length=100)
+    apellido: str = Field(min_length=1, max_length=100)
+    email: str = Field(min_length=1, max_length=254)
+```
 
-EstudiantePaginaDTO
+Esto permite validar automáticamente los datos recibidos.
 
-Contiene items, total, pagina y tamano.
+Ejemplo válido:
 
-El frontend se comunica con la API mediante HTTP. Envía y recibe JSON; no recibe objetos Python.
+```json
+{
+  "nombre": "Ana",
+  "apellido": "Pérez",
+  "email": "ana@example.com"
+}
+```
 
-Los DTO definen la estructura de esos datos, pero no constituyen la conexión de red.
+---
 
-Configuración de Pydantic
+## Parámetros de paginación
 
-En los DTO de creación y actualización:
-
-model_config = ConfigDict(
-    str_strip_whitespace=True,
-    extra="forbid",
-)
-
-str_strip_whitespace=True: elimina espacios al principio y al final. Por ejemplo, "  Ana  " se convierte en "Ana".
-
-extra="forbid": rechaza campos no definidos en el DTO, como administrador.
-
-Field(min_length=1): impide textos vacíos. Un nombre compuesto solo de espacios también se rechaza después de limpiarlo.
-
-Los nombres y apellidos admiten entre 1 y 100 caracteres. El correo admite entre 1 y 254 caracteres.
-
-En la versión actual, email es de tipo str: se valida su longitud, pero no su formato de correo electrónico. Un texto como "hola" puede ser aceptado. Validar el formato con EmailStr sería una mejora posterior.
-
-El DTO utilizado para los parámetros de consulta contiene:
-
+```python
 class EstudianteQueryDTO(BaseModel):
     pagina: int = Field(default=1, ge=1)
     tamano: int = Field(default=10, ge=1, le=100)
+```
 
-Por lo tanto:
+Esto significa:
 
-pagina debe ser mayor o igual a 1.
+```text
+pagina >= 1
+1 <= tamano <= 100
+```
 
-tamano debe estar entre 1 y 100.
+Valores por defecto:
 
-Si no se indican valores, se utilizan pagina=1 y tamano=10.
+```text
+pagina = 1
+tamano = 10
+```
 
-DTO, dominio y mapeo
+Ejemplo:
 
-domain/estudiante.py define una entidad con dataclass. No utiliza Pydantic.
+```http
+GET /estudiantes?pagina=2&tamano=10
+```
 
-El DTO y la entidad de dominio no son lo mismo:
+---
 
-EstudianteCreateDTO
-    ↓
-    datos recibidos por la API
+## Cómo funciona la paginación
 
-Estudiante
-    ↓
-    entidad del dominio
+El servicio calcula:
 
-El servicio construye la entidad utilizando los valores recibidos desde el DTO:
+```python
+offset = (pagina - 1) * tamano
+```
 
-estudiante = Estudiante(
-    nombre=nombre,
-    apellido=apellido,
-    email=email,
-)
+Ejemplo:
 
-La entidad también ofrece la propiedad nombre_completo y los métodos activar() y desactivar(). Estos dos métodos todavía no tienen endpoints en el router actual.
+```text
+pagina = 3
+tamano = 10
 
-El DTO de respuesta utiliza:
+offset = (3 - 1) * 10
+offset = 20
+```
 
-model_config = ConfigDict(from_attributes=True)
+Con 60 estudiantes:
 
-Esto permite leer atributos de un objeto del dominio.
+```text
+Página 1 → registros 1 al 10
+Página 2 → registros 11 al 20
+Página 3 → registros 21 al 30
+Página 4 → registros 31 al 40
+Página 5 → registros 41 al 50
+Página 6 → registros 51 al 60
+Página 7 → sin resultados
+```
 
-El router realiza la conversión mediante:
+---
 
-EstudianteResponseDTO.model_validate(estudiante)
+## Seeder
 
-Pydantic obtiene los atributos correspondientes, valida sus valores y construye el DTO. También puede leer la propiedad nombre_completo.
+El proyecto incluye:
 
-¿Por qué no existe un mapper?
+```text
+infrastructure/
+└── seeders/
+    └── estudiante_seeder.py
+```
 
-Por ahora no existe un archivo mapper separado porque la transformación es directa:
+El seeder carga **60 estudiantes de prueba** en memoria cuando se inicia la aplicación.
 
-DTO
- ↓
-Estudiante
+Flujo:
 
-y:
+```text
+main.py
+   ↓
+seed_estudiantes()
+   ↓
+EstudianteService
+   ↓
+EstudianteRepository
+   ↓
+Memoria
+```
 
-Estudiante
- ↓
-EstudianteResponseDTO
+`app/main.py` ejecuta:
 
-Agregar un mapper en esta etapa introduciría una abstracción adicional sin resolver un problema real.
+```python
+service = EstudianteService(estudiante_repository)
 
-Un mapper explícito puede incorporarse posteriormente cuando existan varias representaciones del mismo dato, por ejemplo:
+seed_estudiantes(service)
+```
 
+---
+
+## Almacenamiento en memoria
+
+```text
+EstudianteRepository
+        ↓
+dict[int, Estudiante]
+```
+
+Esto significa que:
+
+- los datos existen mientras el proceso está ejecutándose;
+- los datos se pierden al detener el servidor;
+- los datos vuelven a cargarse mediante el seeder al iniciar nuevamente;
+- no existen migraciones;
+- no existe una base de datos;
+- no existe ORM.
+
+---
+
+## ¿Por qué no existe Mapper todavía?
+
+Un mapper transforma una representación en otra.
+
+Ejemplo futuro:
+
+```text
 DTO
  ↓
 Entidad de dominio
@@ -407,479 +415,341 @@ Entidad de dominio
 Modelo ORM
  ↓
 Base de datos
+```
 
-En ese escenario, el mapper se encargaría de transformar una representación en otra.
+Actualmente tenemos:
 
-Mapper y schema no son lo mismo:
+```text
+DTO
+ ↓
+Entidad de dominio
+ ↓
+Repositorio en memoria
+```
 
-Schema: define estructura y validación.
+Para construir el DTO de respuesta se utiliza directamente:
 
-DTO: transporta datos.
-
-Mapper: transforma una representación en otra.
-
-Imports de los DTO
-
-Debido a la nueva estructura, el router debe importar los DTO desde presentation.schemas.dtos.
-
-Los imports correctos son:
-
-from presentation.schemas.dtos.estudiante_dto import (
-    EstudianteCreateDTO,
-    EstudianteUpdateDTO,
-    EstudianteResponseDTO,
-    EstudiantePaginaDTO,
-)
-
-from presentation.schemas.dtos.estudiante_query_dto import (
-    EstudianteQueryDTO,
-)
-
-No debe utilizarse la ruta antigua:
-
-presentation.dtos
-
-porque esa carpeta ya no forma parte de la estructura actual.
-
-Recorrido de una solicitud
-
-Para crear un estudiante:
-
-Cliente envía POST /estudiantes con JSON
-    ↓
-FastAPI interpreta la solicitud HTTP
-    ↓
-EstudianteCreateDTO valida el JSON
-    ↓
-Router recibe el DTO validado
-    ↓
-Router pasa los datos al servicio
-    ↓
-Servicio crea la entidad Estudiante
-    ↓
-Servicio verifica que el correo no esté duplicado
-    ↓
-Repositorio asigna un ID
-    ↓
-Repositorio guarda el estudiante en memoria
-    ↓
-Servicio devuelve la entidad al router
-    ↓
+```python
 EstudianteResponseDTO.model_validate(estudiante)
-    ↓
-FastAPI serializa la respuesta a JSON
-    ↓
-HTTP 201 Created
+```
 
-El dominio no es una parada adicional: define el objeto Estudiante que utilizan el servicio y el repositorio.
+Resumen:
 
-Si el DTO rechaza los datos de entrada, FastAPI responde con 422 antes de ejecutar la lógica del servicio.
+```text
+Schema  → define estructura y validación
+DTO     → transporta datos
+Mapper  → transforma una representación en otra
+```
 
-Endpoints disponibles
+---
 
-Método
+## Recorrido de una solicitud POST
 
-Ruta
+Solicitud:
 
-Acción
+```http
+POST /estudiantes
+```
 
-Respuesta exitosa
+Body:
 
-POST
-
-/estudiantes
-
-Crear un estudiante.
-
-201 y estudiante creado.
-
-GET
-
-/estudiantes
-
-Listar con paginación.
-
-200 y página de resultados.
-
-GET
-
-/estudiantes/{estudiante_id}
-
-Consultar por ID.
-
-200 y estudiante.
-
-PUT
-
-/estudiantes/{estudiante_id}
-
-Actualizar nombre, apellido y correo.
-
-200 y estudiante actualizado.
-
-DELETE
-
-/estudiantes/{estudiante_id}
-
-Eliminar el registro de memoria.
-
-204, sin cuerpo.
-
-PUT requiere los tres campos editables; no es una actualización parcial. Conserva el estado activo que ya tenía el estudiante.
-
-DELETE elimina el registro; no llama al método desactivar().
-
-Prueba paso a paso en Swagger
-
-Abre Swagger UI, despliega un endpoint, pulsa Try it out, completa sus datos y pulsa Execute.
-
-1. Crear un estudiante
-
-Usa POST /estudiantes:
-
+```json
 {
   "nombre": "Ana",
   "apellido": "Pérez",
   "email": "ana@example.com"
 }
+```
 
-En una ejecución nueva, el primer estudiante tendrá ID 1.
+Recorrido:
 
-Respuesta esperada, con código 201:
+```text
+Cliente
+   │
+   │ POST /estudiantes
+   │ JSON
+   ▼
+FastAPI
+   │
+   ▼
+EstudianteCreateDTO
+   │
+   │ valida
+   ▼
+Router
+   │
+   ▼
+EstudianteService
+   │
+   │ crea Estudiante
+   │ verifica email
+   ▼
+EstudianteRepository
+   │
+   │ asigna ID
+   │ guarda en memoria
+   ▼
+EstudianteService
+   │
+   ▼
+Router
+   │
+   ▼
+EstudianteResponseDTO
+   │
+   ▼
+FastAPI
+   │
+   │ JSON + HTTP 201
+   ▼
+Cliente
+```
 
-{
-  "id": 1,
-  "nombre": "Ana",
-  "apellido": "Pérez",
-  "email": "ana@example.com",
-  "activo": true,
-  "nombre_completo": "Ana Pérez"
-}
+---
 
-2. Consultar y listar
+## Endpoints disponibles
 
-Consulta el ID devuelto usando:
+| Método | Endpoint | Acción |
+|---|---|---|
+| `POST` | `/estudiantes` | Crear estudiante |
+| `GET` | `/estudiantes` | Listar estudiantes con paginación |
+| `GET` | `/estudiantes/{estudiante_id}` | Obtener estudiante |
+| `PUT` | `/estudiantes/{estudiante_id}` | Actualizar estudiante |
+| `DELETE` | `/estudiantes/{estudiante_id}` | Eliminar estudiante |
 
-GET /estudiantes/1
+---
 
-Luego usa:
+## Probar la API con Swagger
 
-GET /estudiantes?pagina=1&tamano=5
+Ejecuta:
 
-Si solo creaste el estudiante del ejemplo, recibirás:
+```bash
+uv run uvicorn app.main:app --reload
+```
 
+Luego abre:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+Prueba:
+
+```http
+GET /estudiantes?pagina=1&tamano=10
+```
+
+Respuesta paginada:
+
+```json
 {
   "items": [
     {
       "id": 1,
       "nombre": "Ana",
       "apellido": "Pérez",
-      "email": "ana@example.com",
+      "email": "estudiante01@example.com",
       "activo": true,
       "nombre_completo": "Ana Pérez"
     }
   ],
-  "total": 1,
+  "total": 60,
   "pagina": 1,
-  "tamano": 5
+  "tamano": 10
 }
+```
 
-tamano es el máximo solicitado, no necesariamente la cantidad de elementos recibidos.
+La lista real contendrá hasta 10 estudiantes.
 
-total cuenta todos los estudiantes guardados, no solo los de esa página.
+Para probar la paginación:
 
-3. Actualizar
+```text
+pagina=1  tamano=10
+pagina=2  tamano=10
+pagina=3  tamano=10
+pagina=6  tamano=10
+pagina=7  tamano=10
+```
 
-Usa PUT /estudiantes/1 con:
+La página 7 debe devolver una lista vacía:
 
-{
-  "nombre": "Ana María",
-  "apellido": "Pérez",
-  "email": "ana@example.com"
-}
-
-Se permite conservar el propio correo.
-
-Si el correo pertenece a otro estudiante, la operación se rechaza.
-
-4. Comprobar validaciones
-
-Prueba
-
-Resultado esperado
-
-Crear con nombre vacío o solo espacios.
-
-422.
-
-Crear agregando un campo administrador.
-
-422.
-
-Crear o actualizar con un correo de otro estudiante.
-
-400.
-
-Listar con pagina=0 o tamano=101.
-
-422.
-
-Consultar, actualizar o eliminar un ID positivo inexistente.
-
-404.
-
-Usar ID 0 o negativo en una ruta de estudiante.
-
-422.
-
-La comparación de correos duplicados ignora mayúsculas y espacios exteriores. Por ejemplo, ANA@example.com y ana@example.com se consideran el mismo correo.
-
-5. Eliminar
-
-Usa:
-
-DELETE /estudiantes/1
-
-Debe responder 204 sin contenido.
-
-Si vuelves a consultar ese ID, debe responder 404.
-
-Cómo funciona la paginación
-
-Ejemplo de solicitud:
-
-GET /estudiantes?pagina=2&tamano=5
-
-EstudianteQueryDTO valida los parámetros.
-
-El servicio calcula:
-
-offset = (pagina - 1) * tamano
-
-El repositorio ordena por ID y selecciona la parte correspondiente de la lista.
-
-El router construye EstudiantePaginaDTO con los resultados y el total.
-
-Con página 2 y tamaño 5:
-
-offset = (2 - 1) * 5
-offset = 5
-
-Se saltan los primeros cinco registros y se devuelven hasta cinco más.
-
-Una página fuera de los resultados devuelve:
-
+```json
 {
   "items": [],
-  "total": 3,
-  "pagina": 10,
-  "tamano": 5
+  "total": 60,
+  "pagina": 7,
+  "tamano": 10
 }
+```
 
-con código 200, conservando el total real.
+---
 
-Consideraciones del almacenamiento en memoria
+## Códigos HTTP importantes
 
-La versión actual utiliza un repositorio en memoria.
+| Código | Significado |
+|---|---|
+| `200 OK` | Solicitud procesada correctamente |
+| `201 Created` | Estudiante creado |
+| `204 No Content` | Estudiante eliminado |
+| `400 Bad Request` | Regla de aplicación inválida |
+| `404 Not Found` | Estudiante inexistente |
+| `422 Unprocessable Entity` | Error de validación |
 
-EstudianteRepository
-        ↓
-dict[int, Estudiante]
+---
 
-Esto implica:
+## Depuración con VS Code
 
-La instancia estudiante_repository se reutiliza entre solicitudes del mismo proceso.
+El proyecto incluye:
 
-Los datos se pierden cuando el servidor se detiene o reinicia.
+```text
+.vscode/
+├── launch.json
+└── settings.json
+```
 
-Los datos también pueden perderse cuando --reload reinicia el proceso.
+Para iniciar la depuración:
 
-No se utiliza una base de datos.
+```text
+Ctrl + Shift + D
+```
 
-No se utiliza ORM.
+Selecciona:
 
-No existen migraciones.
+```text
+Depurar API de estudiantes
+```
 
-No ejecutes este ejemplo con varios workers: cada proceso tendría su propio diccionario.
+y presiona:
 
-El repositorio usa copias para evitar que modificar un objeto devuelto cambie accidentalmente el registro almacenado.
+```text
+F5
+```
 
-La versión didáctica no incorpora bloqueos ni transacciones para solicitudes simultáneas.
+La configuración actual de `launch.json` utiliza el puerto:
 
-No garantiza IDs y correos únicos bajo concurrencia.
+```text
+8001
+```
 
-No incluye autenticación ni permisos.
+Si ese puerto está ocupado, cambia el valor en `.vscode/launch.json`.
 
-No debe exponerse públicamente con datos reales de estudiantes.
+| Tecla | Acción |
+|---|---|
+| `F9` | Agregar o quitar breakpoint |
+| `F10` | Avanzar sin entrar en una función |
+| `F11` | Entrar en una función |
+| `Shift + F11` | Salir de una función |
+| `F5` | Continuar ejecución |
+| `Shift + F5` | Detener depuración |
 
-Resumen de la arquitectura actual
+Referencia: [Depuración de Python en VS Code](https://code.visualstudio.com/docs/python/debugging).
 
-CLIENTE
-   │
-   │ HTTP / JSON
-   ▼
-┌──────────────────────────────┐
-│ PRESENTATION                 │
-│                              │
-│ Router                       │
-│   ↓                          │
-│ schemas/dtos                 │
-│ Pydantic + validaciones      │
-└──────────────┬───────────────┘
-               │
-               ▼
-┌──────────────────────────────┐
-│ APPLICATION                  │
-│                              │
-│ EstudianteService            │
-│ Casos de uso y coordinación  │
-└──────────────┬───────────────┘
-               │
-               ▼
-┌──────────────────────────────┐
-│ DOMAIN                       │
-│                              │
-│ Estudiante                   │
-│ Estado y comportamiento      │
-└──────────────┬───────────────┘
-               │
-               ▼
-┌──────────────────────────────┐
-│ INFRASTRUCTURE               │
-│                              │
-│ EstudianteRepository         │
-│ almacenamiento en memoria    │
-└──────────────────────────────┘
+---
 
-La dirección principal del flujo es:
+## Problemas frecuentes
 
-HTTP
- ↓
-Router
- ↓
-DTO / Schema
- ↓
-Service
- ↓
-Domain
- ↓
-Repository
- ↓
-Memoria
+### Address already in use
 
-Problemas frecuentes
+Si aparece:
 
-No module named 'presentation.dtos'
+```text
+ERROR: [Errno 98] Address already in use
+```
 
-Después de mover los DTO a schemas/dtos, los imports antiguos dejan de funcionar.
+el puerto ya está siendo utilizado.
 
-Utiliza:
+En Linux o WSL:
 
-from presentation.schemas.dtos.estudiante_dto import ...
+```bash
+sudo ss -ltnp | grep :8000
+```
+
+Puedes iniciar Uvicorn en otro puerto:
+
+```bash
+uv run uvicorn app.main:app --reload --port 8765
+```
+
+### No module named 'presentation.dtos'
+
+La ruta antigua:
+
+```python
+from presentation.dtos.estudiante_dto import ...
+```
+
+ya no corresponde a la estructura actual.
+
+La ruta correcta es:
+
+```python
+from presentation.schemas.dtos.estudiante_dto import (
+    EstudianteCreateDTO,
+    EstudianteUpdateDTO,
+    EstudianteResponseDTO,
+    EstudiantePaginaDTO,
+)
+```
 
 y:
 
-from presentation.schemas.dtos.estudiante_query_dto import ...
+```python
+from presentation.schemas.dtos.estudiante_query_dto import (
+    EstudianteQueryDTO,
+)
+```
 
-No module named 'app'
+### No module named 'app'
 
-Ejecuta el servidor desde la raíz, no desde dentro de app.
+Ejecuta Uvicorn desde:
 
-En PowerShell puedes comprobarlo con:
+```text
+backend_S4/
+```
 
-Get-Location
-Get-ChildItem
-Test-Path .\app\main.py
+El comando correcto es:
 
-El último comando debe devolver True.
+```bash
+uv run uvicorn app.main:app --reload
+```
 
-cannot import name 'EstudianteRepository'
+---
 
-Comprueba que el archivo infrastructure/repositories/estudiante_repository.py esté guardado y contenga tanto la clase EstudianteRepository como la instancia:
+## Estado actual del proyecto
 
-estudiante_repository = EstudianteRepository()
+Actualmente se trabajan:
 
-No aparecen endpoints en Swagger
-
-Comprueba que app/main.py tenga:
-
-from fastapi import FastAPI
-from presentation.routers.estudiante_router import router
-
-app = FastAPI(title="Sistema Académico")
-app.include_router(router)
-
-Archivos que no deben subirse a Git
-
-El .gitignore debe incluir al menos:
-
-.venv/
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.env
-
-Sí debes conservar:
-
-pyproject.toml
-uv.lock
-
-Si los archivos __pycache__ ya están publicados, agregar estas reglas no los retira del seguimiento: hace falta quitarlos también del índice de Git.
-
-Estado actual del proyecto
-
-En esta etapa se trabajan los siguientes conceptos:
-
-FastAPI.
-
-Uvicorn.
-
-HTTP y JSON.
-
-Rutas y endpoints.
-
-CRUD.
-
-Pydantic.
-
-DTO.
-
-Schemas.
-
-Validación de entrada y salida.
-
-Separación por capas.
-
-Entidades de dominio.
-
-Servicios.
-
-Repositorios.
-
-Almacenamiento en memoria.
-
-Paginación.
-
-Manejo de errores HTTP.
-
-Swagger / OpenAPI.
+- FastAPI.
+- Uvicorn.
+- HTTP.
+- JSON.
+- CRUD.
+- Rutas.
+- Parámetros de ruta.
+- Parámetros de consulta.
+- Pydantic.
+- Schemas.
+- DTO.
+- Validaciones.
+- Entidad de dominio.
+- Servicios.
+- Repositorios.
+- Almacenamiento en memoria.
+- Seeder.
+- Paginación.
+- Códigos de estado HTTP.
+- Swagger / OpenAPI.
+- Separación de responsabilidades.
 
 Todavía no se incorporan:
 
-Base de datos.
+- Base de datos.
+- ORM.
+- Migraciones.
+- Mapper explícito.
+- Autenticación.
+- Autorización.
+- Docker.
+- CI/CD.
 
-ORM.
-
-Migraciones.
-
-Mapper explícito.
-
-Autenticación.
-
-Autorización.
-
-Docker.
-
-CI/CD.
-
-La incorporación de estas responsabilidades se realizará progresivamente a medida que el proyecto evolucione.
+El proyecto continuará evolucionando progresivamente durante el curso.
