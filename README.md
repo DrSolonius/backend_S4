@@ -1,17 +1,27 @@
-# Sistema Académico — API de estudiantes
+# Sistema Académico — API de estudiantes y cursos
 
-Proyecto educativo para aprender a construir una API HTTP con **FastAPI**, organizar el código por capas y utilizar **Pydantic, DTO, schemas, servicios, dominio y repositorios**.
+Proyecto educativo para aprender a construir una API HTTP con **FastAPI**, organizar el código por capas y persistir datos en **PostgreSQL** usando el ORM **SQLAlchemy 2.1** y migraciones con **Alembic**.
 
-La aplicación permite crear, consultar, actualizar, eliminar y listar estudiantes y cursos con paginación, e inscribir estudiantes en cursos (un estudiante puede tomar n cursos y un curso puede tener n estudiantes).
+La aplicación permite:
 
-En esta etapa:
+- crear, consultar, actualizar, eliminar y listar **estudiantes** y **cursos** con paginación;
+- **inscribir** estudiantes en cursos: un estudiante puede tomar n cursos y un curso puede tener n estudiantes (relación **muchos a muchos**).
 
-- Los datos se almacenan en **PostgreSQL** mediante el ORM **SQLAlchemy 2.1** (driver `psycopg2`).
-- La relación estudiante ↔ curso es **muchos a muchos** con la tabla de asociación `inscripciones`.
-- Los **mappers** convierten entre entidades de dominio y modelos ORM.
-- Cada solicitud recibe su propia sesión de base de datos mediante `Depends`.
-- Los DTO están organizados dentro de `presentation/schemas/dtos/`.
-- Se utilizan **seeders** que cargan 60 estudiantes, 10 cursos y 180 inscripciones si la base de datos está vacía.
+---
+
+## Tecnologías
+
+| Tecnología | Uso |
+|---|---|
+| Python 3.14 | Lenguaje |
+| FastAPI + Uvicorn | API HTTP y servidor |
+| Pydantic | DTO y validación |
+| SQLAlchemy 2.1 | ORM (modelos, sesiones, consultas) |
+| psycopg2 | Driver de PostgreSQL |
+| PostgreSQL | Base de datos |
+| Alembic | Migraciones del esquema |
+| python-dotenv | Lectura de la configuración desde `.env` |
+| uv | Gestión de dependencias y entorno virtual |
 
 ---
 
@@ -20,7 +30,7 @@ En esta etapa:
 - Python 3.14 o superior.
 - `uv` instalado.
 - Git.
-- PostgreSQL corriendo localmente.
+- PostgreSQL corriendo localmente, con una base de datos creada para el proyecto.
 
 ---
 
@@ -49,9 +59,9 @@ DB_USER=alumno
 DB_PASSWORD=mi_clave_segura
 ```
 
-La base de datos indicada en `DB_NAME` debe existir.
+El archivo `.env` contiene credenciales: está en `.gitignore` y **no se sube al repositorio**.
 
-Crea las tablas aplicando las migraciones con Alembic:
+Crea las tablas aplicando las migraciones:
 
 ```bash
 uv run alembic upgrade head
@@ -67,7 +77,7 @@ Desde la raíz del proyecto:
 uv run uvicorn app.main:app --reload
 ```
 
-Por defecto Uvicorn utiliza el puerto `8000`.
+Al iniciar, si la base de datos está vacía, los seeders cargan datos de prueba.
 
 Swagger:
 
@@ -102,30 +112,63 @@ backend_S4/
 │
 ├── application/
 │   └── services/
-│       └── estudiante_service.py
+│       ├── curso_service.py
+│       ├── estudiante_service.py
+│       └── inscripcion_service.py
 │
 ├── domain/
-│   └── estudiante.py
+│   ├── curso.py
+│   ├── estudiante.py
+│   └── inscripcion.py
 │
 ├── infrastructure/
+│   ├── database.py
+│   │
+│   ├── mappers/
+│   │   ├── curso_mapper.py
+│   │   └── estudiante_mapper.py
+│   │
+│   ├── models/
+│   │   ├── curso_model.py
+│   │   ├── estudiante_model.py
+│   │   └── inscripcion_model.py
+│   │
 │   ├── repositories/
-│   │   └── estudiante_repository.py
+│   │   ├── curso_repository.py
+│   │   ├── estudiante_repository.py
+│   │   └── inscripcion_repository.py
 │   │
 │   └── seeders/
-│       └── estudiante_seeder.py
+│       ├── curso_seeder.py
+│       ├── estudiante_seeder.py
+│       └── inscripcion_seeder.py
+│
+├── migrations/
+│   ├── env.py
+│   ├── script.py.mako
+│   └── versions/
+│       └── 0001_crear_tablas.py
 │
 ├── presentation/
+│   ├── dependencies.py
+│   │
 │   ├── routers/
-│   │   └── estudiante_router.py
+│   │   ├── curso_router.py
+│   │   ├── estudiante_router.py
+│   │   └── inscripcion_router.py
 │   │
 │   └── schemas/
 │       └── dtos/
+│           ├── curso_dto.py
+│           ├── curso_query_dto.py
 │           ├── estudiante_dto.py
 │           └── estudiante_query_dto.py
 │
+├── .env.example
 ├── .gitignore
-├── README.md
+├── alembic.ini
 ├── pyproject.toml
+├── README.md
 └── uv.lock
 ```
 
@@ -137,16 +180,20 @@ backend_S4/
 |---|---|
 | `app/main.py` | Crea la aplicación FastAPI, carga los datos iniciales y registra los routers. |
 | `presentation/routers` | Define los endpoints y recibe las solicitudes HTTP. |
-| `presentation/schemas` | Agrupa las estructuras relacionadas con entrada, salida y validación de la API. |
 | `presentation/schemas/dtos` | Contiene los DTO implementados con Pydantic. |
+| `presentation/dependencies.py` | Abre una sesión de base de datos por solicitud y construye los servicios con `Depends`. |
 | `application/services` | Coordina los casos de uso y las reglas de aplicación. |
-| `domain` | Define la entidad `Estudiante`, su estado y comportamiento. |
-| `infrastructure/repositories` | Guarda y recupera estudiantes desde memoria. |
-| `infrastructure/seeders` | Carga datos iniciales para pruebas. |
+| `domain` | Define las entidades `Estudiante`, `Curso` e `Inscripcion`, su estado y comportamiento. |
+| `infrastructure/database.py` | Lee el `.env`, crea el `engine` de PostgreSQL, la `SessionLocal` y la clase `Base`. |
+| `infrastructure/models` | Modelos ORM: las tablas de la base de datos como clases de Python. |
+| `infrastructure/mappers` | Convierten entre entidades de dominio y modelos ORM. |
+| `infrastructure/repositories` | Guardan y recuperan datos usando una sesión de SQLAlchemy. |
+| `infrastructure/seeders` | Cargan datos iniciales para pruebas. |
+| `migrations` | Migraciones de Alembic que crean y modifican el esquema. |
 
 ---
 
-## Arquitectura actual
+## Arquitectura
 
 ```text
 CLIENTE
@@ -156,9 +203,8 @@ CLIENTE
 ┌─────────────────────────────────┐
 │ PRESENTATION                    │
 │                                 │
-│ Router                          │
-│ + DTO / Pydantic                │
-│ + Validaciones                  │
+│ Routers + DTO / Pydantic        │
+│ Depends → sesión por solicitud  │
 └────────────────┬────────────────┘
                  │
                  ▼
@@ -166,14 +212,15 @@ CLIENTE
 │ APPLICATION                     │
 │                                 │
 │ EstudianteService               │
-│ Casos de uso y coordinación     │
+│ CursoService                    │
+│ InscripcionService              │
 └────────────────┬────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────┐
 │ DOMAIN                          │
 │                                 │
-│ Estudiante                      │
+│ Estudiante, Curso, Inscripcion  │
 │ Estado y comportamiento         │
 └────────────────┬────────────────┘
                  │
@@ -181,9 +228,12 @@ CLIENTE
 ┌─────────────────────────────────┐
 │ INFRASTRUCTURE                  │
 │                                 │
-│ EstudianteRepository            │
-│ Almacenamiento en memoria       │
-└─────────────────────────────────┘
+│ Repositories → Mappers          │
+│ Modelos ORM → Session           │
+└────────────────┬────────────────┘
+                 │ SQL (psycopg2)
+                 ▼
+            PostgreSQL
 ```
 
 Flujo simplificado:
@@ -199,111 +249,143 @@ Service
    ↓
 Entidad de dominio
    ↓
-Repository
+Repository + Mapper
    ↓
-Memoria
+Modelo ORM + Session (SQLAlchemy)
+   ↓
+PostgreSQL
+```
+
+El dominio y los servicios no conocen SQLAlchemy: trabajan con entidades de dominio. Solo la capa de infraestructura sabe que los datos viven en PostgreSQL.
+
+---
+
+## Modelo de datos
+
+```text
+┌──────────────┐        ┌─────────────────┐        ┌──────────────┐
+│ estudiantes  │        │  inscripciones  │        │    cursos    │
+├──────────────┤        ├─────────────────┤        ├──────────────┤
+│ id (PK)      │1      n│ estudiante_id   │n      1│ id (PK)      │
+│ nombre       ├────────┤   (PK, FK)      ├────────┤ codigo (UQ)  │
+│ apellido     │        │ curso_id        │        │ nombre       │
+│ email (UQ)   │        │   (PK, FK)      │        │ creditos     │
+│ activo       │        └─────────────────┘        │ activo       │
+└──────────────┘                                   └──────────────┘
+```
+
+- `inscripciones` es la **tabla de asociación** de la relación muchos a muchos.
+- Su clave primaria es el par (`estudiante_id`, `curso_id`): un estudiante no puede inscribirse dos veces en el mismo curso.
+- Las claves foráneas usan `ON DELETE CASCADE`: al eliminar un estudiante o un curso, se eliminan sus inscripciones.
+- `email` y `codigo` son únicos.
+
+En SQLAlchemy la relación se declara con `relationship(secondary=...)`:
+
+```python
+class EstudianteModel(Base):
+    __tablename__ = "estudiantes"
+    ...
+    cursos: Mapped[list["CursoModel"]] = relationship(
+        secondary=inscripciones,
+        back_populates="estudiantes",
+    )
 ```
 
 ---
 
-## ¿Qué es un schema?
+## Endpoints disponibles
 
-En este proyecto, `schemas/` agrupa las estructuras utilizadas por la capa de presentación para definir cómo deben verse los datos que entran y salen de la API.
+### Estudiantes
 
-Actualmente los DTO son clases de Pydantic, por lo que ya cumplen funciones de:
+| Método | Endpoint | Acción |
+|---|---|---|
+| `POST` | `/estudiantes` | Crear estudiante |
+| `GET` | `/estudiantes` | Listar estudiantes con paginación |
+| `GET` | `/estudiantes/{estudiante_id}` | Obtener estudiante |
+| `PUT` | `/estudiantes/{estudiante_id}` | Actualizar estudiante |
+| `DELETE` | `/estudiantes/{estudiante_id}` | Eliminar estudiante (y sus inscripciones) |
 
-- definición de estructura;
-- validación;
-- transformación;
-- serialización.
+### Cursos
 
-Por eso se organizan así:
+| Método | Endpoint | Acción |
+|---|---|---|
+| `POST` | `/cursos` | Crear curso |
+| `GET` | `/cursos` | Listar cursos con paginación |
+| `GET` | `/cursos/{curso_id}` | Obtener curso |
+| `PUT` | `/cursos/{curso_id}` | Actualizar curso |
+| `DELETE` | `/cursos/{curso_id}` | Eliminar curso (y sus inscripciones) |
 
-```text
-presentation/
-└── schemas/
-    └── dtos/
-        ├── estudiante_dto.py
-        └── estudiante_query_dto.py
-```
+### Inscripciones
 
-No se crea un archivo `estudiante_schema.py` adicional porque duplicaría responsabilidades en esta etapa.
+| Método | Endpoint | Acción |
+|---|---|---|
+| `POST` | `/estudiantes/{estudiante_id}/cursos/{curso_id}` | Inscribir al estudiante en el curso |
+| `DELETE` | `/estudiantes/{estudiante_id}/cursos/{curso_id}` | Retirar al estudiante del curso |
+| `GET` | `/estudiantes/{estudiante_id}/cursos` | Listar los cursos de un estudiante |
+| `GET` | `/cursos/{curso_id}/estudiantes` | Listar los estudiantes de un curso |
+
+Reglas de inscripción:
+
+- el estudiante y el curso deben existir (si no, `404`);
+- ambos deben estar activos (si no, `400`);
+- no se puede inscribir dos veces en el mismo curso (`400`).
+
+---
+
+## Entidades de dominio
+
+| Entidad | Atributos | Reglas |
+|---|---|---|
+| `Estudiante` | `id`, `nombre`, `apellido`, `email`, `activo` | Nombre, apellido y email obligatorios. Email único (sin distinguir mayúsculas). Propiedad `nombre_completo`. |
+| `Curso` | `id`, `codigo`, `nombre`, `creditos`, `activo` | Código obligatorio, se guarda en mayúsculas y es único. Créditos ≥ 1. Propiedad `descripcion`. |
+| `Inscripcion` | `estudiante_id`, `curso_id` | Une un estudiante con un curso. |
 
 ---
 
 ## ¿Qué es un DTO?
 
-DTO significa **Data Transfer Object**.
-
-Un DTO representa datos que se transfieren entre componentes.
+DTO significa **Data Transfer Object**: representa los datos que entran y salen de la API. En este proyecto los DTO son clases de Pydantic, por lo que además validan y serializan.
 
 | DTO | Responsabilidad |
 |---|---|
-| `EstudianteCreateDTO` | Define y valida los datos necesarios para crear un estudiante. |
-| `EstudianteUpdateDTO` | Define y valida los datos necesarios para actualizar un estudiante. |
-| `EstudianteResponseDTO` | Define la estructura de un estudiante devuelto por la API. |
-| `EstudiantePaginaDTO` | Define la respuesta paginada. |
-| `EstudianteQueryDTO` | Valida los parámetros `pagina` y `tamano`. |
-
-Los DTO se encuentran en:
-
-```text
-presentation/schemas/dtos/
-```
-
----
-
-## DTO y entidad de dominio
-
-```text
-EstudianteCreateDTO
-        │
-        │ datos de entrada
-        ▼
-EstudianteService
-        │
-        │ crea
-        ▼
-Estudiante
-```
-
-`EstudianteCreateDTO` pertenece a la frontera de la API.
-
-`Estudiante` representa el objeto del dominio.
-
----
-
-## Validación con Pydantic
+| `EstudianteCreateDTO` / `EstudianteUpdateDTO` | Validan los datos para crear o actualizar un estudiante. |
+| `EstudianteResponseDTO` | Estructura de un estudiante devuelto por la API. |
+| `EstudiantePaginaDTO` | Respuesta paginada de estudiantes. |
+| `EstudianteQueryDTO` | Valida `pagina` y `tamano`. |
+| `CursoCreateDTO` / `CursoUpdateDTO` | Validan los datos para crear o actualizar un curso (`creditos` entre 1 y 30). |
+| `CursoResponseDTO` | Estructura de un curso devuelto por la API. |
+| `CursoPaginaDTO` | Respuesta paginada de cursos. |
+| `CursoQueryDTO` | Valida `pagina` y `tamano`. |
 
 Ejemplo:
 
 ```python
-class EstudianteCreateDTO(BaseModel):
+class CursoCreateDTO(BaseModel):
     model_config = ConfigDict(
         str_strip_whitespace=True,
         extra="forbid",
     )
 
-    nombre: str = Field(min_length=1, max_length=100)
-    apellido: str = Field(min_length=1, max_length=100)
-    email: str = Field(min_length=1, max_length=254)
+    codigo: str = Field(min_length=1, max_length=20)
+    nombre: str = Field(min_length=1, max_length=150)
+    creditos: int = Field(ge=1, le=30)
 ```
 
-Esto permite validar automáticamente los datos recibidos.
+### DTO, entidad de dominio y modelo ORM
 
-Ejemplo válido:
-
-```json
-{
-  "nombre": "Ana",
-  "apellido": "Pérez",
-  "email": "ana@example.com"
-}
+```text
+CursoCreateDTO      → frontera de la API (Pydantic)
+        ↓
+Curso               → dominio (dataclass, reglas de negocio)
+        ↓  curso_mapper
+CursoModel          → infraestructura (SQLAlchemy, tabla cursos)
+        ↓
+PostgreSQL
 ```
 
 ---
 
-## Parámetros de paginación
+## Paginación
 
 ```python
 class EstudianteQueryDTO(BaseModel):
@@ -311,153 +393,104 @@ class EstudianteQueryDTO(BaseModel):
     tamano: int = Field(default=10, ge=1, le=100)
 ```
 
-Esto significa:
-
-```text
-pagina >= 1
-1 <= tamano <= 100
-```
-
-Valores por defecto:
-
-```text
-pagina = 1
-tamano = 10
-```
-
-Ejemplo:
-
-```http
-GET /estudiantes?pagina=2&tamano=10
-```
-
----
-
-## Cómo funciona la paginación
-
 El servicio calcula:
 
 ```python
 offset = (pagina - 1) * tamano
 ```
 
-Ejemplo:
-
-```text
-pagina = 3
-tamano = 10
-
-offset = (3 - 1) * 10
-offset = 20
-```
-
-Con 60 estudiantes:
-
-```text
-Página 1 → registros 1 al 10
-Página 2 → registros 11 al 20
-Página 3 → registros 21 al 30
-Página 4 → registros 31 al 40
-Página 5 → registros 41 al 50
-Página 6 → registros 51 al 60
-Página 7 → sin resultados
-```
-
----
-
-## Seeder
-
-El proyecto incluye:
-
-```text
-infrastructure/
-└── seeders/
-    └── estudiante_seeder.py
-```
-
-El seeder carga **60 estudiantes de prueba** en memoria cuando se inicia la aplicación.
-
-Flujo:
-
-```text
-main.py
-   ↓
-seed_estudiantes()
-   ↓
-EstudianteService
-   ↓
-EstudianteRepository
-   ↓
-Memoria
-```
-
-`app/main.py` ejecuta:
+y el repositorio lo traduce a SQL con SQLAlchemy:
 
 ```python
-service = EstudianteService(estudiante_repository)
-
-seed_estudiantes(service)
+select(EstudianteModel)
+    .order_by(EstudianteModel.id)
+    .offset(offset)
+    .limit(limite)
 ```
+
+Con 60 estudiantes y `tamano=10`, la página 6 trae los registros 51 al 60 y la página 7 una lista vacía.
 
 ---
 
-## Persistencia con SQLAlchemy
+## Persistencia con SQLAlchemy 2.1
 
-```text
-Service
-   ↓  entidad de dominio (Estudiante, Curso)
-Repository
-   ↓  mapper
-Modelo ORM (EstudianteModel, CursoModel)
-   ↓  Session
-PostgreSQL
+### Conexión (`infrastructure/database.py`)
+
+```python
+load_dotenv()
+
+url = URL.create(
+    "postgresql+psycopg2",
+    username=os.environ["DB_USER"],
+    password=os.environ["DB_PASSWORD"],
+    host=os.environ["DB_HOST"],
+    port=int(os.environ.get("DB_PORT", 5432)),
+    database=os.environ["DB_NAME"],
+)
+
+engine = create_engine(url, echo=False)
+SessionLocal = sessionmaker(bind=engine, autoflush=False)
 ```
 
-Archivos nuevos en `infrastructure/`:
+Cambia `echo=False` por `echo=True` para ver en consola el SQL que genera el ORM.
 
-| Archivo | Responsabilidad |
-|---|---|
-| `database.py` | Lee el `.env`, crea el `engine` de PostgreSQL, la `SessionLocal`, la clase `Base` y las tablas. |
-| `models/estudiante_model.py` | Tabla `estudiantes`. |
-| `models/curso_model.py` | Tabla `cursos`. |
-| `models/inscripcion_model.py` | Tabla de asociación `inscripciones` (muchos a muchos). |
-| `mappers/*_mapper.py` | Convierten entre entidad de dominio y modelo ORM. |
+### Sesión por solicitud (`presentation/dependencies.py`)
 
-Además, `presentation/dependencies.py` abre una sesión por solicitud y construye los servicios con `Depends`.
+Cada solicitud HTTP recibe su propia sesión, que se cierra al terminar:
 
-Esto significa que:
+```python
+def get_session() -> Iterator[Session]:
+    session = SessionLocal()
 
-- los datos se conservan al detener el servidor;
-- las tablas se crean y modifican con migraciones de Alembic (ver más abajo);
-- los seeders solo se ejecutan cuando la base de datos está vacía;
-- para empezar de cero: `uv run alembic downgrade base` y luego `uv run alembic upgrade head`;
-- la conexión se configura con las variables `DB_*` del archivo `.env`;
-- las migraciones viven en `migrations/versions/`.
+    try:
+        yield session
+    finally:
+        session.close()
+```
+
+Los routers piden el servicio con `Depends`, y el servicio recibe repositorios que usan esa sesión:
+
+```python
+ServiceDep = Annotated[CursoService, Depends(get_curso_service)]
+
+
+@router.get("/{curso_id}", response_model=CursoResponseDTO)
+def obtener_curso(curso_id: CursoId, service: ServiceDep):
+    ...
+```
+
+### Repositorios y mappers
+
+Los repositorios mantienen los mismos métodos que cuando los datos estaban en memoria (`crear`, `obtener_por_id`, `listar`, `contar`, `actualizar`, `eliminar`), por eso los servicios y el dominio no cambiaron al incorporar el ORM. Internamente usan la sesión y un mapper:
+
+```python
+def crear(self, curso: Curso) -> Curso:
+    modelo = curso_mapper.a_modelo(curso)
+
+    self.session.add(modelo)
+    self.session.commit()
+    self.session.refresh(modelo)
+
+    return curso_mapper.a_dominio(modelo)
+```
 
 ---
 
 ## Migraciones con Alembic
 
-Alembic guarda en la tabla `alembic_version` qué migración está aplicada en la base de datos. `migrations/env.py` usa el mismo `engine` que la aplicación, así que también lee la conexión desde el `.env`.
-
-```text
-backend_S4/
-├── alembic.ini
-└── migrations/
-    ├── env.py
-    ├── script.py.mako
-    └── versions/
-        └── 0001_crear_tablas.py
-```
+Las tablas **no** se crean al iniciar la API: se crean y modifican con migraciones. Alembic guarda en la tabla `alembic_version` qué migración está aplicada. `migrations/env.py` usa el mismo `engine` que la aplicación, así que también lee la conexión desde el `.env` (no hay credenciales en `alembic.ini`).
 
 | Comando | Qué hace |
 |---|---|
 | `uv run alembic upgrade head` | Aplica todas las migraciones pendientes. |
 | `uv run alembic downgrade -1` | Deshace la última migración. |
+| `uv run alembic downgrade base` | Deshace todas las migraciones (borra las tablas). |
 | `uv run alembic current` | Muestra la migración aplicada. |
 | `uv run alembic history` | Lista todas las migraciones. |
 | `uv run alembic revision --autogenerate -m "mensaje"` | Crea una migración comparando los modelos con la base de datos. |
 | `uv run alembic check` | Indica si hay cambios en los modelos sin migración. |
+
+La migración inicial `0001_crear_tablas.py` crea `estudiantes`, `cursos` e `inscripciones` con sus índices únicos y claves foráneas.
 
 Flujo para cambiar un modelo (por ejemplo, agregar una columna):
 
@@ -468,150 +501,74 @@ Flujo para cambiar un modelo (por ejemplo, agregar una columna):
 4. uv run alembic upgrade head
 ```
 
-Si las tablas ya existían antes de usar Alembic (creadas con `create_all`), no ejecutes `upgrade` sobre ellas: marca la base de datos como actualizada con
+Para empezar de cero:
 
 ```bash
-uv run alembic stamp head
+uv run alembic downgrade base
+uv run alembic upgrade head
 ```
 
 ---
 
-## ¿Por qué no existe Mapper todavía?
+## Seeders
 
-Un mapper transforma una representación en otra.
+Al iniciar la API, `app/main.py` revisa si la tabla `estudiantes` está vacía. Si lo está, carga:
 
-Ejemplo futuro:
+| Seeder | Datos |
+|---|---|
+| `estudiante_seeder.py` | 60 estudiantes |
+| `curso_seeder.py` | 10 cursos (`INF101`, `INF102`, …, `MAT102`) |
+| `inscripcion_seeder.py` | 180 inscripciones (cada estudiante en 3 cursos) |
 
-```text
-DTO
- ↓
-Entidad de dominio
- ↓
-Modelo ORM
- ↓
-Base de datos
-```
-
-Actualmente tenemos:
-
-```text
-DTO
- ↓
-Entidad de dominio
- ↓
-Repositorio en memoria
-```
-
-Para construir el DTO de respuesta se utiliza directamente:
-
-```python
-EstudianteResponseDTO.model_validate(estudiante)
-```
-
-Resumen:
-
-```text
-Schema  → define estructura y validación
-DTO     → transporta datos
-Mapper  → transforma una representación en otra
-```
+Si la base de datos ya tiene datos, los seeders no se ejecutan.
 
 ---
 
 ## Recorrido de una solicitud POST
 
-Solicitud:
-
 ```http
-POST /estudiantes
+POST /estudiantes/1/cursos/5
 ```
-
-Body:
-
-```json
-{
-  "nombre": "Ana",
-  "apellido": "Pérez",
-  "email": "ana@example.com"
-}
-```
-
-Recorrido:
 
 ```text
 Cliente
-   │
-   │ POST /estudiantes
-   │ JSON
+   │ POST /estudiantes/1/cursos/5
    ▼
 FastAPI
-   │
+   │ valida los parámetros de ruta (> 0)
+   │ get_session() abre una sesión
    ▼
-EstudianteCreateDTO
-   │
-   │ valida
+inscripcion_router
    ▼
-Router
-   │
+InscripcionService
+   │ verifica que el estudiante y el curso existan y estén activos
+   │ verifica que no exista la inscripción
    ▼
-EstudianteService
-   │
-   │ crea Estudiante
-   │ verifica email
+InscripcionRepository
+   │ estudiante.cursos.append(curso)
+   │ session.commit() → INSERT INTO inscripciones
    ▼
-EstudianteRepository
-   │
-   │ asigna ID
-   │ guarda en memoria
+PostgreSQL
    ▼
-EstudianteService
-   │
-   ▼
-Router
-   │
-   ▼
-EstudianteResponseDTO
-   │
-   ▼
-FastAPI
-   │
+CursoResponseDTO
    │ JSON + HTTP 201
    ▼
 Cliente
+   (la sesión se cierra)
 ```
-
----
-
-## Endpoints disponibles
-
-| Método | Endpoint | Acción |
-|---|---|---|
-| `POST` | `/estudiantes` | Crear estudiante |
-| `GET` | `/estudiantes` | Listar estudiantes con paginación |
-| `GET` | `/estudiantes/{estudiante_id}` | Obtener estudiante |
-| `PUT` | `/estudiantes/{estudiante_id}` | Actualizar estudiante |
-| `DELETE` | `/estudiantes/{estudiante_id}` | Eliminar estudiante |
 
 ---
 
 ## Probar la API con Swagger
 
-Ejecuta:
-
-```bash
-uv run uvicorn app.main:app --reload
-```
-
-Luego abre:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-Prueba:
+Abre `http://127.0.0.1:8000/docs` y prueba:
 
 ```http
 GET /estudiantes?pagina=1&tamano=10
+GET /cursos
+GET /estudiantes/1/cursos
+POST /estudiantes/1/cursos/5
+GET /cursos/5/estudiantes
 ```
 
 Respuesta paginada:
@@ -621,38 +578,15 @@ Respuesta paginada:
   "items": [
     {
       "id": 1,
-      "nombre": "Ana",
-      "apellido": "Pérez",
-      "email": "estudiante01@example.com",
+      "codigo": "INF101",
+      "nombre": "Introducción a la Programación",
+      "creditos": 6,
       "activo": true,
-      "nombre_completo": "Ana Pérez"
+      "descripcion": "INF101 - Introducción a la Programación"
     }
   ],
-  "total": 60,
+  "total": 10,
   "pagina": 1,
-  "tamano": 10
-}
-```
-
-La lista real contendrá hasta 10 estudiantes.
-
-Para probar la paginación:
-
-```text
-pagina=1  tamano=10
-pagina=2  tamano=10
-pagina=3  tamano=10
-pagina=6  tamano=10
-pagina=7  tamano=10
-```
-
-La página 7 debe devolver una lista vacía:
-
-```json
-{
-  "items": [],
-  "total": 60,
-  "pagina": 7,
   "tamano": 10
 }
 ```
@@ -664,49 +598,23 @@ La página 7 debe devolver una lista vacía:
 | Código | Significado |
 |---|---|
 | `200 OK` | Solicitud procesada correctamente |
-| `201 Created` | Estudiante creado |
-| `204 No Content` | Estudiante eliminado |
-| `400 Bad Request` | Regla de aplicación inválida |
-| `404 Not Found` | Estudiante inexistente |
+| `201 Created` | Recurso creado o inscripción realizada |
+| `204 No Content` | Recurso eliminado o estudiante retirado del curso |
+| `400 Bad Request` | Regla de aplicación inválida (email o código duplicado, inscripción repetida, entidad inactiva) |
+| `404 Not Found` | Estudiante, curso o inscripción inexistente |
 | `422 Unprocessable Entity` | Error de validación |
 
 ---
 
 ## Depuración con VS Code
 
-El proyecto incluye:
+El proyecto incluye `.vscode/launch.json`. Para iniciar la depuración:
 
 ```text
-.vscode/
-├── launch.json
-└── settings.json
+Ctrl + Shift + D → "Depurar API de estudiantes" → F5
 ```
 
-Para iniciar la depuración:
-
-```text
-Ctrl + Shift + D
-```
-
-Selecciona:
-
-```text
-Depurar API de estudiantes
-```
-
-y presiona:
-
-```text
-F5
-```
-
-La configuración actual de `launch.json` utiliza el puerto:
-
-```text
-8001
-```
-
-Si ese puerto está ocupado, cambia el valor en `.vscode/launch.json`.
+La configuración utiliza el puerto `8001`. Si ese puerto está ocupado, cambia el valor en `.vscode/launch.json`.
 
 | Tecla | Acción |
 |---|---|
@@ -723,70 +631,37 @@ Referencia: [Depuración de Python en VS Code](https://code.visualstudio.com/doc
 
 ## Problemas frecuentes
 
-### Address already in use
+### KeyError: 'DB_USER' (u otra variable `DB_*`)
 
-Si aparece:
+Falta el archivo `.env` o le falta esa variable. Copia `.env.example` como `.env` y completa los datos.
 
-```text
-ERROR: [Errno 98] Address already in use
-```
+### relation "estudiantes" does not exist
 
-el puerto ya está siendo utilizado.
-
-En Linux o WSL:
+Las tablas no existen todavía. Ejecuta:
 
 ```bash
-sudo ss -ltnp | grep :8000
+uv run alembic upgrade head
 ```
 
-Puedes iniciar Uvicorn en otro puerto:
+### DuplicateTable al ejecutar `alembic upgrade head`
+
+Las tablas ya existían antes de usar Alembic (por ejemplo, creadas con `create_all`). Marca la base de datos como actualizada sin volver a crearlas:
+
+```bash
+uv run alembic stamp head
+```
+
+### Address already in use
+
+El puerto ya está siendo utilizado. Inicia Uvicorn en otro puerto:
 
 ```bash
 uv run uvicorn app.main:app --reload --port 8765
 ```
 
-### No module named 'presentation.dtos'
-
-La ruta antigua:
-
-```python
-from presentation.dtos.estudiante_dto import ...
-```
-
-ya no corresponde a la estructura actual.
-
-La ruta correcta es:
-
-```python
-from presentation.schemas.dtos.estudiante_dto import (
-    EstudianteCreateDTO,
-    EstudianteUpdateDTO,
-    EstudianteResponseDTO,
-    EstudiantePaginaDTO,
-)
-```
-
-y:
-
-```python
-from presentation.schemas.dtos.estudiante_query_dto import (
-    EstudianteQueryDTO,
-)
-```
-
 ### No module named 'app'
 
-Ejecuta Uvicorn desde:
-
-```text
-backend_S4/
-```
-
-El comando correcto es:
-
-```bash
-uv run uvicorn app.main:app --reload
-```
+Ejecuta los comandos desde la carpeta `backend_S4/`.
 
 ---
 
@@ -794,30 +669,24 @@ uv run uvicorn app.main:app --reload
 
 Actualmente se trabajan:
 
-- FastAPI.
-- Uvicorn.
-- HTTP.
-- JSON.
-- CRUD.
-- Rutas.
-- Parámetros de ruta.
-- Parámetros de consulta.
-- Pydantic.
-- Schemas.
-- DTO.
-- Validaciones.
-- Entidad de dominio.
-- Servicios.
-- Repositorios.
-- Almacenamiento en memoria.
-- Seeder.
-- Paginación.
+- FastAPI, Uvicorn, HTTP y JSON.
+- CRUD, rutas, parámetros de ruta y de consulta.
+- Pydantic, schemas, DTO y validaciones.
+- Entidades de dominio, servicios y repositorios.
+- Relación muchos a muchos (estudiantes ↔ cursos).
+- PostgreSQL con SQLAlchemy 2.1 (modelos, sesiones, relaciones).
+- Mappers entre dominio y modelos ORM.
+- Inyección de dependencias con `Depends`.
+- Migraciones con Alembic.
+- Configuración con `.env`.
+- Seeders y paginación.
 - Códigos de estado HTTP.
 - Swagger / OpenAPI.
 - Separación de responsabilidades.
 
 Todavía no se incorporan:
 
+- Pruebas automatizadas.
 - Autenticación.
 - Autorización.
 - Docker.
