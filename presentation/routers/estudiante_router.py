@@ -1,11 +1,17 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Path, Query, Response, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Path,
+    Query,
+    Response,
+    status,
+)
 
 from application.services.estudiante_service import EstudianteService
-from infrastructure.repositories.estudiante_repository import (
-    estudiante_repository,
-)
+from presentation.dependencies import get_estudiante_service
 from presentation.schemas.dtos.estudiante_dto import (
     EstudianteCreateDTO,
     EstudianteUpdateDTO,
@@ -23,8 +29,8 @@ router = APIRouter(
     tags=["Estudiantes"],
 )
 
-# Reutilizamos el mismo repositorio en memoria.
-service = EstudianteService(estudiante_repository)
+# El servicio se construye por solicitud con su propia sesión de base de datos.
+ServiceDep = Annotated[EstudianteService, Depends(get_estudiante_service)]
 
 EstudianteId = Annotated[int, Path(gt=0)]
 
@@ -34,7 +40,7 @@ EstudianteId = Annotated[int, Path(gt=0)]
     response_model=EstudianteResponseDTO,
     status_code=status.HTTP_201_CREATED,
 )
-def crear_estudiante(datos: EstudianteCreateDTO):
+def crear_estudiante(datos: EstudianteCreateDTO, service: ServiceDep):
     try:
         estudiante = service.crear(
             nombre=datos.nombre,
@@ -53,6 +59,7 @@ def crear_estudiante(datos: EstudianteCreateDTO):
 @router.get("", response_model=EstudiantePaginaDTO)
 def listar_estudiantes(
     query: Annotated[EstudianteQueryDTO, Query()],
+    service: ServiceDep,
 ):
     estudiantes, total = service.listar(
         pagina=query.pagina,
@@ -74,7 +81,7 @@ def listar_estudiantes(
     "/{estudiante_id}",
     response_model=EstudianteResponseDTO,
 )
-def obtener_estudiante(estudiante_id: EstudianteId):
+def obtener_estudiante(estudiante_id: EstudianteId, service: ServiceDep):
     estudiante = service.obtener(estudiante_id)
 
     if estudiante is None:
@@ -93,6 +100,7 @@ def obtener_estudiante(estudiante_id: EstudianteId):
 def actualizar_estudiante(
     estudiante_id: EstudianteId,
     datos: EstudianteUpdateDTO,
+    service: ServiceDep,
 ):
     try:
         estudiante = service.actualizar(
@@ -120,7 +128,7 @@ def actualizar_estudiante(
     "/{estudiante_id}",
     status_code=status.HTTP_204_NO_CONTENT,
 )
-def eliminar_estudiante(estudiante_id: EstudianteId):
+def eliminar_estudiante(estudiante_id: EstudianteId, service: ServiceDep):
     eliminado = service.eliminar(estudiante_id)
 
     if not eliminado:

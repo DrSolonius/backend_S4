@@ -2,11 +2,19 @@ from domain.estudiante import Estudiante
 from infrastructure.repositories.estudiante_repository import (
     EstudianteRepository,
 )
+from infrastructure.repositories.inscripcion_repository import (
+    InscripcionRepository,
+)
 
 
 class EstudianteService:
-    def __init__(self, repository: EstudianteRepository) -> None:
+    def __init__(
+        self,
+        repository: EstudianteRepository,
+        inscripcion_repository: InscripcionRepository,
+    ) -> None:
         self.repository = repository
+        self.inscripcion_repository = inscripcion_repository
 
     def crear(
         self,
@@ -76,7 +84,12 @@ class EstudianteService:
         return self.repository.actualizar(actualizado)
 
     def eliminar(self, estudiante_id: int) -> bool:
-        return self.repository.eliminar(estudiante_id)
+        eliminado = self.repository.eliminar(estudiante_id)
+
+        if eliminado:
+            self.inscripcion_repository.eliminar_por_estudiante(estudiante_id)
+
+        return eliminado
 
     def _validar_email_disponible(
         self,

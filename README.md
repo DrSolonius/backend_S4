@@ -2,16 +2,16 @@
 
 Proyecto educativo para aprender a construir una API HTTP con **FastAPI**, organizar el código por capas y utilizar **Pydantic, DTO, schemas, servicios, dominio y repositorios**.
 
-La aplicación permite crear, consultar, actualizar, eliminar y listar estudiantes con paginación.
+La aplicación permite crear, consultar, actualizar, eliminar y listar estudiantes y cursos con paginación, e inscribir estudiantes en cursos (un estudiante puede tomar n cursos y un curso puede tener n estudiantes).
 
 En esta etapa:
 
-- Los datos se almacenan **en memoria**.
-- No se utiliza base de datos.
-- No se utiliza ORM.
+- Los datos se almacenan en **PostgreSQL** mediante el ORM **SQLAlchemy 2.1** (driver `psycopg2`).
+- La relación estudiante ↔ curso es **muchos a muchos** con la tabla de asociación `inscripciones`.
+- Los **mappers** convierten entre entidades de dominio y modelos ORM.
+- Cada solicitud recibe su propia sesión de base de datos mediante `Depends`.
 - Los DTO están organizados dentro de `presentation/schemas/dtos/`.
-- Se utiliza un **seeder** para cargar 60 estudiantes de prueba.
-- No existe un mapper separado porque las conversiones actuales son directas.
+- Se utilizan **seeders** que cargan 60 estudiantes, 10 cursos y 180 inscripciones si la base de datos está vacía.
 
 ---
 
@@ -20,6 +20,7 @@ En esta etapa:
 - Python 3.14 o superior.
 - `uv` instalado.
 - Git.
+- PostgreSQL corriendo localmente.
 
 ---
 
@@ -36,6 +37,24 @@ Instala las dependencias:
 
 ```bash
 uv sync
+```
+
+Configura la conexión a PostgreSQL copiando `.env.example` como `.env` y completando tus datos:
+
+```text
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=clase
+DB_USER=alumno
+DB_PASSWORD=mi_clave_segura
+```
+
+La base de datos indicada en `DB_NAME` debe existir.
+
+Crea las tablas aplicando las migraciones con Alembic:
+
+```bash
+uv run alembic upgrade head
 ```
 
 ---
@@ -382,22 +401,78 @@ seed_estudiantes(service)
 
 ---
 
-## Almacenamiento en memoria
+## Persistencia con SQLAlchemy
 
 ```text
-EstudianteRepository
-        ↓
-dict[int, Estudiante]
+Service
+   ↓  entidad de dominio (Estudiante, Curso)
+Repository
+   ↓  mapper
+Modelo ORM (EstudianteModel, CursoModel)
+   ↓  Session
+PostgreSQL
 ```
+
+Archivos nuevos en `infrastructure/`:
+
+| Archivo | Responsabilidad |
+|---|---|
+| `database.py` | Lee el `.env`, crea el `engine` de PostgreSQL, la `SessionLocal`, la clase `Base` y las tablas. |
+| `models/estudiante_model.py` | Tabla `estudiantes`. |
+| `models/curso_model.py` | Tabla `cursos`. |
+| `models/inscripcion_model.py` | Tabla de asociación `inscripciones` (muchos a muchos). |
+| `mappers/*_mapper.py` | Convierten entre entidad de dominio y modelo ORM. |
+
+Además, `presentation/dependencies.py` abre una sesión por solicitud y construye los servicios con `Depends`.
 
 Esto significa que:
 
-- los datos existen mientras el proceso está ejecutándose;
-- los datos se pierden al detener el servidor;
-- los datos vuelven a cargarse mediante el seeder al iniciar nuevamente;
-- no existen migraciones;
-- no existe una base de datos;
-- no existe ORM.
+- los datos se conservan al detener el servidor;
+- las tablas se crean y modifican con migraciones de Alembic (ver más abajo);
+- los seeders solo se ejecutan cuando la base de datos está vacía;
+- para empezar de cero: `uv run alembic downgrade base` y luego `uv run alembic upgrade head`;
+- la conexión se configura con las variables `DB_*` del archivo `.env`;
+- las migraciones viven en `migrations/versions/`.
+
+---
+
+## Migraciones con Alembic
+
+Alembic guarda en la tabla `alembic_version` qué migración está aplicada en la base de datos. `migrations/env.py` usa el mismo `engine` que la aplicación, así que también lee la conexión desde el `.env`.
+
+```text
+backend_S4/
+├── alembic.ini
+└── migrations/
+    ├── env.py
+    ├── script.py.mako
+    └── versions/
+        └── 0001_crear_tablas.py
+```
+
+| Comando | Qué hace |
+|---|---|
+| `uv run alembic upgrade head` | Aplica todas las migraciones pendientes. |
+| `uv run alembic downgrade -1` | Deshace la última migración. |
+| `uv run alembic current` | Muestra la migración aplicada. |
+| `uv run alembic history` | Lista todas las migraciones. |
+| `uv run alembic revision --autogenerate -m "mensaje"` | Crea una migración comparando los modelos con la base de datos. |
+| `uv run alembic check` | Indica si hay cambios en los modelos sin migración. |
+
+Flujo para cambiar un modelo (por ejemplo, agregar una columna):
+
+```text
+1. Modificar el modelo en infrastructure/models/
+2. uv run alembic revision --autogenerate -m "agregar columna telefono"
+3. Revisar el archivo generado en migrations/versions/
+4. uv run alembic upgrade head
+```
+
+Si las tablas ya existían antes de usar Alembic (creadas con `create_all`), no ejecutes `upgrade` sobre ellas: marca la base de datos como actualizada con
+
+```bash
+uv run alembic stamp head
+```
 
 ---
 
@@ -743,10 +818,6 @@ Actualmente se trabajan:
 
 Todavía no se incorporan:
 
-- Base de datos.
-- ORM.
-- Migraciones.
-- Mapper explícito.
 - Autenticación.
 - Autorización.
 - Docker.
